@@ -15,11 +15,23 @@ header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
 header('Cache-Control: public, s-maxage=30, stale-while-revalidate=60');
 
-$DB_URL     = rtrim(getenv('FIREBASE_DB_URL') ?: 'https://YOUR-PROJECT-default-rtdb.firebaseio.com', '/');
+$DB_URL     = rtrim(getenv('FIREBASE_DB_URL') ?: 'https://privatems-vercel-app-default-rtdb.firebaseio.com', '/');
 $PATH       = trim(getenv('FIREBASE_PATH') ?: 'videos', '/');
 $USERS_PATH = trim(getenv('FIREBASE_USERS_PATH') ?: '', '/');
 $AUTH       = getenv('FIREBASE_AUTH') ?: '';
 $LIMIT      = (int)(getenv('VIDEO_LIMIT') ?: 200);
+
+// Visit /grab.php?debug=1 to list the top-level nodes in your database (helps find the right FIREBASE_PATH)
+function debug_mode($DB_URL, $PATH, $AUTH) {
+    $a = $AUTH !== '' ? '&auth=' . rawurlencode($AUTH) : '';
+    $root = fetch_json("$DB_URL/.json?shallow=true$a");
+    echo json_encode([
+        'databaseUrl'    => $DB_URL,
+        'configuredPath' => $PATH,
+        'topLevelNodes'  => is_array($root) ? array_keys($root) : $root,
+    ]);
+    exit;
+}
 
 function fail($code, $msg) {
     http_response_code($code);
@@ -79,6 +91,8 @@ $VIDEO_KEYS  = ['videoUrl', 'video_url', 'videoURL', 'url', 'video', 'link', 'sr
                 'streamUrl', 'mp4', 'file', 'videoLink', 'video_link'];
 $CREATOR_KEYS = ['creator', 'creatorName', 'creator_name', 'author', 'authorName', 'uploader', 'username',
                  'userName', 'user', 'channel', 'channelName', 'owner', 'artist', 'by'];
+
+if (isset($_GET['debug'])) debug_mode($DB_URL, $PATH, $AUTH);
 
 // ---- Fetch videos (newest keys last in Firebase, so we reverse afterwards) ----
 $qs = 'orderBy=' . rawurlencode('"$key"') . '&limitToLast=' . $LIMIT;
